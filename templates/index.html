@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Azure AI Assistant</title>
+
+<style>
+:root {
+ --primary: #6366f1;
+ --accent: #22d3ee;
+ --bg-dark: #0f172a;
+ --bg-light: #111827;
+ --card: rgba(255,255,255,0.08);
+ --border: rgba(255,255,255,0.12);
+}
+
+* {
+ box-sizing: border-box;
+}
+
+body {
+ margin: 0;
+ height: 100vh;
+ font-family: "Inter", "Segoe UI", sans-serif;
+ background: linear-gradient(120deg, #020617, #0f172a);
+ color: #e5e7eb;
+ display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+ width: 260px;
+ background: linear-gradient(180deg, #020617, #020617cc);
+ border-right: 1px solid var(--border);
+ padding: 24px;
+ display: flex;
+ flex-direction: column;
+}
+
+.sidebar h2 {
+ font-size: 20px;
+ margin-bottom: 8px;
+}
+
+.sidebar p {
+ font-size: 13px;
+ opacity: 0.7;
+ margin-bottom: 24px;
+}
+
+.new-chat {
+ padding: 12px;
+ border-radius: 10px;
+ background: linear-gradient(135deg, var(--primary), var(--accent));
+ border: none;
+ color: white;
+ cursor: pointer;
+ font-weight: 600;
+}
+
+.new-chat:hover {
+ opacity: 0.9;
+}
+
+/* Main area */
+.main {
+ flex: 1;
+ display: flex;
+ flex-direction: column;
+}
+
+/* Header */
+.topbar {
+ padding: 18px 28px;
+ border-bottom: 1px solid var(--border);
+ font-size: 18px;
+ font-weight: 600;
+}
+
+/* Chat area */
+.chat-area {
+ flex: 1;
+ padding: 32px;
+ overflow-y: auto;
+}
+
+.message {
+ max-width: 720px;
+ margin-bottom: 20px;
+ padding: 18px 20px;
+ border-radius: 16px;
+ background: var(--card);
+ border: 1px solid var(--border);
+ animation: slideUp 0.25s ease;
+}
+
+.message.user {
+ margin-left: auto;
+ background: linear-gradient(135deg, #1d4ed8, #2563eb);
+ border: none;
+}
+
+.message.bot {
+ backdrop-filter: blur(12px);
+}
+
+/* Input */
+.input-area {
+ padding: 24px;
+ border-top: 1px solid var(--border);
+ background: linear-gradient(180deg, transparent, rgba(0,0,0,0.4));
+}
+
+.input-box {
+ display: flex;
+ background: rgba(255,255,255,0.06);
+ border-radius: 16px;
+ padding: 14px;
+ border: 1px solid var(--border);
+}
+
+.input-box input {
+flex: 1;
+ background: transparent;
+ border: none;
+ outline: none;
+ color: white;
+ font-size: 15px;
+}
+
+.input-box button {
+ padding: 10px 16px;
+ margin-left: 12px;
+ background: linear-gradient(135deg, var(--primary), var(--accent));
+ border: none;
+ border-radius: 12px;
+ color: white;
+ font-weight: 600;
+ cursor: pointer;
+}
+
+.input-box button:disabled {
+ background: rgba(99, 102, 241, 0.5);
+    cursor: not-allowed;
+}
+
+/* Animations */
+@keyframes slideUp {
+ from { opacity: 0; transform: translateY(10px); }
+ to { opacity: 1; transform: translateY(0); }
+}
+
+.loading {
+    font-size: 14px;
+    color: #22d3ee;
+    font-weight: 600;
+}
+</style>
+</head>
+
+<body>
+
+<div class="sidebar">
+ <h2>Azure AI</h2>
+ <p>Conversational Assistant</p>
+ <button class="new-chat" onclick="clearChat()">+ New Chat</button>
+</div>
+
+<div class="main">
+ <div class="topbar">AI Assistant</div>
+
+ <div class="chat-area" id="chatBox"></div>
+
+ <div class="input-area">
+ <div class="input-box">
+ <input id="messageInput" placeholder="Ask something intelligent..." />
+ <button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+ </div>
+ </div>
+</div>
+
+<script>
+const chatBox = document.getElementById("chatBox");
+const input = document.getElementById("messageInput");
+const sendButton = document.getElementById("sendButton");
+
+input.addEventListener("input", () => {
+    sendButton.disabled = !input.value.trim();
+});
+
+input.addEventListener("keydown", e => {
+ if (e.key === "Enter" && input.value.trim()) sendMessage();
+});
+
+function addMessage(text, type) {
+ const div = document.createElement("div");
+ div.className = "message " + type;
+ div.textContent = text;
+ chatBox.appendChild(div);
+ chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function clearChat() {
+ chatBox.innerHTML = "";
+}
+
+async function sendMessage() {
+ const message = input.value.trim();
+ if (!message) return;
+
+ addMessage(message, "user");
+ input.value = "";
+    sendButton.disabled = true;
+
+    // Show loading message while waiting for bot response
+    const loadingMessage = document.createElement("div");
+    loadingMessage.className = "message bot loading";
+    loadingMessage.textContent = "Bot is thinking...";
+    chatBox.appendChild(loadingMessage);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+ try {
+const res = await fetch("/chat", {
+ method: "POST",
+ headers: { "Content-Type": "application/json" },
+ body: JSON.stringify({ message })
+});
+
+ if (!res.ok) throw new Error("Failed to fetch bot response.");
+
+ const data = await res.json();
+ chatBox.removeChild(loadingMessage); // Remove loading message
+ addMessage(data.reply, "bot");
+ } catch (error) {
+ chatBox.removeChild(loadingMessage); // Remove loading message
+ addMessage("Sorry, I couldn't respond at the moment.", "bot");
+ } finally {
+ sendButton.disabled = false;
+ }
+}
+</script>
+
+</body>
+</html>
+
+
